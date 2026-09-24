@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: sc-mongodb
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - student-companion-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: sc-auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGODB_URI=mongodb://mongodb:27017/student_companion
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - FRONTEND_URL=http://localhost
+    depends_on:
+      - mongodb
+    networks:
+      - student-companion-network
+    restart: unless-stopped
+
+  profile-service:
+    build: ./services/profile-service
+    container_name: sc-profile-service
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGODB_URI=mongodb://mongodb:27017/student_companion
+    depends_on:
+      - mongodb
+    networks:
+      - student-companion-network
+    restart: unless-stopped
+
+  expense-service:
+    build: ./services/expense-service
+    container_name: sc-expense-service
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - MONGODB_URI=mongodb://mongodb:27017/student_companion
+    depends_on:
+      - mongodb
+    networks:
+      - student-companion-network
+    restart: unless-stopped
+
+  feed-service:
+    build: ./services/feed-service
+    container_name: sc-feed-service
+    ports:
+      - "5006:5006"
+    environment:
+      - PORT=5006
+      - MONGODB_URI=mongodb://mongodb:27017/student_companion
+    depends_on:
+      - mongodb
+    networks:
+      - student-companion-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sc-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - profile-service
+      - expense-service
+      - feed-service
+    networks:
+      - student-companion-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  student-companion-network:
+    driver: bridge

@@ -1,0 +1,100 @@
+services:
+  # MongoDB Database
+  - type: pserv
+    name: student-companion-mongodb
+    env: docker
+    dockerfilePath: ./Dockerfile.mongo
+    plan: free
+    disk:
+      name: mongodb-data
+      mountPath: /data/db
+      sizeGB: 1
+
+  # Auth Service
+  - type: web
+    name: student-companion-auth
+    env: docker
+    dockerfilePath: ./services/auth-service/Dockerfile
+    dockerContext: ./services/auth-service
+    plan: free
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: MONGODB_URI
+        fromDatabase:
+          name: student-companion-mongodb
+          property: connectionString
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: FRONTEND_URL
+        value: https://student-companion-frontend.onrender.com
+
+  # Profile Service
+  - type: web
+    name: student-companion-profile
+    env: docker
+    dockerfilePath: ./services/profile-service/Dockerfile
+    dockerContext: ./services/profile-service
+    plan: free
+    envVars:
+      - key: PORT
+        value: 5002
+      - key: MONGODB_URI
+        fromDatabase:
+          name: student-companion-mongodb
+          property: connectionString
+
+  # Expense Service
+  - type: web
+    name: student-companion-expense
+    env: docker
+    dockerfilePath: ./services/expense-service/Dockerfile
+    dockerContext: ./services/expense-service
+    plan: free
+    envVars:
+      - key: PORT
+        value: 5003
+      - key: MONGODB_URI
+        fromDatabase:
+          name: student-companion-mongodb
+          property: connectionString
+
+  # Feed Service
+  - type: web
+    name: student-companion-feed
+    env: docker
+    dockerfilePath: ./services/feed-service/Dockerfile
+    dockerContext: ./services/feed-service
+    plan: free
+    envVars:
+      - key: PORT
+        value: 5006
+      - key: MONGODB_URI
+        fromDatabase:
+          name: student-companion-mongodb
+          property: connectionString
+
+  # Frontend
+  - type: web
+    name: student-companion-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    envVars:
+      - key: VITE_AUTH_SERVICE_URL
+        value: https://student-companion-auth.onrender.com
+      - key: VITE_PROFILE_SERVICE_URL
+        value: https://student-companion-profile.onrender.com
+      - key: VITE_EXPENSE_SERVICE_URL
+        value: https://student-companion-expense.onrender.com
+      - key: VITE_FEED_SERVICE_URL
+        value: https://student-companion-feed.onrender.com
+
+databases:
+  - name: student-companion-db
+    databaseName: student_companion
+    user: studentcompanion
+    plan: free
